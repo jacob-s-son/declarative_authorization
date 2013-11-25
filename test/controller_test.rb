@@ -18,8 +18,14 @@ class SpecificMocksController < MocksController
   filter_access_to :new, :require => :test, :context => :permissions
   
   filter_access_to [:action_group_action_1, :action_group_action_2]
+  filter_access_to :test_context_as_method, :attribute_check => true, :retrieve_context_method => :context
   define_action_methods :test_action, :test_action_2, :show, :edit, :create,
-    :edit_2, :new, :unprotected_action, :action_group_action_1, :action_group_action_2
+    :edit_2, :new, :unprotected_action, :action_group_action_1, :action_group_action_2, :test_context_as_method
+
+
+  def context
+    :load_mock_objects
+  end
 end
 
 class BasicControllerTest < ActionController::TestCase
@@ -68,6 +74,19 @@ class BasicControllerTest < ActionController::TestCase
     assert !@controller.authorized?
     
     request!(MockUser.new(:test_role), "show", reader)
+    assert @controller.authorized?
+  end
+
+  def test_filter_access_with_context_as_method
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role do
+          has_permission_on :load_mock_objects, :to => :test_context_as_method
+        end
+      end
+    }
+    request!(MockUser.new(:test_role), "test_context_as_method", reader, :id => 1)
     assert @controller.authorized?
   end
   
