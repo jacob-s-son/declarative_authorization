@@ -281,7 +281,12 @@ module Authorization
       #   Example demonstrating the default behavior:
       #     filter_access_to :show, :attribute_check => true,
       #                      :load_method => lambda { User.find(params[:id]) }
-      # 
+      # [:+retrieve_context_method]
+      #   Specify a method by symbol or a Proc object which should be used
+      #   to retrieve the context. This can come in handy when you want to
+      #   specify the access in a base class but you want to specifiy the
+      #   context depending on the sublass.
+      #
       
       def filter_access_to (*args, &filter_block)
         options = args.last.is_a?(Hash) ? args.pop : {}
@@ -290,7 +295,8 @@ module Authorization
           :context => nil,
           :attribute_check => false,
           :model => nil,
-          :load_method => nil
+          :load_method => nil,
+          :retrieve_context_method => nil
         }.merge!(options)
         privilege = options[:require]
         context = options[:context]
@@ -308,7 +314,8 @@ module Authorization
                                    options[:attribute_check],
                                    options[:model],
                                    options[:load_method],
-                                   filter_block)
+                                   filter_block,
+                                   options[:retrieve_context_method])
       end
       
       # Collecting all the ControllerPermission objects from the controller
@@ -593,10 +600,10 @@ module Authorization
   end
   
   class ControllerPermission # :nodoc:
-    attr_reader :actions, :privilege, :context, :attribute_check
+    attr_reader :actions, :privilege, :attribute_check
     def initialize (actions, privilege, context, attribute_check = false, 
                     load_object_model = nil, load_object_method = nil,
-                    filter_block = nil)
+                    filter_block = nil, retrieve_context_method = nil)
       @actions = actions.to_set
       @privilege = privilege
       @context = context
@@ -604,6 +611,7 @@ module Authorization
       @load_object_method = load_object_method
       @filter_block = filter_block
       @attribute_check = attribute_check
+      @retrieve_context_method = retrieve_context_method
     end
     
     def matches? (action_name)
@@ -621,14 +629,26 @@ module Authorization
                                          :user => contr.send(:current_user),
                                          :object => object,
                                          :skip_attribute_test => !@attribute_check,
-                                         :context => @context || contr.class.decl_auth_context)
+                                         :context => context(contr) )
     end
     
     def remove_actions (actions)
       @actions -= actions
       self
     end
-    
+
+    def context(controller = nil)
+      return @context unless @context.nil?
+      return nil if controller.nil?
+      if @retrieve_context_method.is_a?(Symbol)
+        return controller.send(@retrieve_context_method)
+      elsif @retrieve_context_method.is_a?(Proc)
+        return controller.instance_eval(&@retrieve_context_method)
+      else
+        controller.class.decl_auth_context
+      end
+    end
+
     private
     def load_object(contr)
       if @load_object_method and @load_object_method.is_a?(Symbol)
@@ -637,7 +657,7 @@ module Authorization
         contr.instance_eval(&@load_object_method)
       else
         load_object_model = @load_object_model ||
-            (@context ? @context.to_s.classify.constantize : contr.class.controller_name.classify.constantize)
+            (context(contr) ? context(contr).to_s.classify.constantize : contr.class.controller_name.classify.constantize)
         instance_var = :"@#{load_object_model.name.underscore}"
         object = contr.instance_variable_get(instance_var)
         unless object
