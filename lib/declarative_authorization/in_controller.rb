@@ -281,12 +281,14 @@ module Authorization
       #   Example demonstrating the default behavior:
       #     filter_access_to :show, :attribute_check => true,
       #                      :load_method => lambda { User.find(params[:id]) }
-      # [:+retrieve_context_method]
+      # [:+retrieve_context_method+]
       #   Specify a method by symbol or a Proc object which should be used
       #   to retrieve the context. This can come in handy when you want to
       #   specify the access in a base class but you want to specifiy the
       #   context depending on the sublass.
-      #
+      # [:+overwrite+]
+      #   Specifify if this filter will overwrite any access filter for the actions
+      #   in common.
       
       def filter_access_to (*args, &filter_block)
         options = args.last.is_a?(Hash) ? args.pop : {}
@@ -296,7 +298,8 @@ module Authorization
           :attribute_check => false,
           :model => nil,
           :load_method => nil,
-          :retrieve_context_method => nil
+          :retrieve_context_method => nil,
+          :overwrite => true
         }.merge!(options)
         privilege = options[:require]
         context = options[:context]
@@ -306,8 +309,10 @@ module Authorization
         skip_before_filter :filter_access_filter
         before_filter :filter_access_filter
         
-        filter_access_permissions.each do |perm|
-          perm.remove_actions(actions)
+        if options[:overwrite]
+          filter_access_permissions.each do |perm|
+            perm.remove_actions(actions)
+          end
         end
         filter_access_permissions << 
           ControllerPermission.new(actions, privilege, context,
