@@ -561,7 +561,11 @@ module Authorization
             end
           when :is_in
             begin
-              evaluated.include?(attr_value)
+              if attr_value.kind_of?(Enumerable)
+                !attr_value.empty? && attr_value.all? { |attr| evaluated.include?(attr) }
+              else
+                evaluated.include?(attr_value)
+              end
             rescue NoMethodError => e
               raise AuthorizationUsageError, "Operator is_in requires a " +
                   "subclass of Enumerable as value, got: #{attr_value.inspect} " +

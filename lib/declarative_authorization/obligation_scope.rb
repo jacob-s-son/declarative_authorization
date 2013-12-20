@@ -270,10 +270,16 @@ module Authorization
               attribute_operator = case operator
                                    when :contains, :is             then "= :#{bindvar}"
                                    when :does_not_contain, :is_not then "<> :#{bindvar}"
-                                   when :is_in                     then "IN (:#{bindvar})"
+                                   when :is_in                     then
+                                     column = model.columns_hash[attribute_name.to_s]
+                                     if defined?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.kind_of?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.array
+                                       "<@ ARRAY[:#{bindvar}]"
+                                     else
+                                      "IN (:#{bindvar})"
+                                     end
                                    when :intersects_with           then
                                      column = model.columns_hash[attribute_name.to_s]
-                                     if column.kind_of?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.array
+                                     if defined?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.kind_of?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.array
                                        "&& ARRAY[:#{bindvar}]"
                                        else
                                          "IN (:#{bindvar})"

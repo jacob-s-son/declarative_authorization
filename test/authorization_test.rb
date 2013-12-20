@@ -551,6 +551,15 @@ class AuthorizationTest < Test::Unit::TestCase
     assert engine.permit?(:test, :context => :permissions, 
               :user => MockUser.new(:test_role),
               :object => MockDataObject.new(:test_attr => 3))
+    assert engine.permit?(:test, :context => :permissions, 
+              :user => MockUser.new(:test_role),
+              :object => MockDataObject.new(:test_attr => [ 1, 2 ]))
+    assert !engine.permit?(:test, :context => :permissions, 
+              :user => MockUser.new(:test_role),
+              :object => MockDataObject.new(:test_attr => [ 1, 2, 4 ]))
+    assert !engine.permit?(:test, :context => :permissions, 
+              :user => MockUser.new(:test_role),
+              :object => MockDataObject.new(:test_attr => [ ]))
     assert !engine.permit?(:test, :context => :permissions, 
               :user => MockUser.new(:test_role),
               :object => MockDataObject.new(:test_attr => 4))
