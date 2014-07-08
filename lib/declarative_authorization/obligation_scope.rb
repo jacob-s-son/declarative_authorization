@@ -266,14 +266,17 @@ module Authorization
                 "#{parent_model.connection.quote_table_name(attribute_name)}"
             if value.nil? and [:is, :is_not].include?(operator)
               obligation_conds << "#{sql_attribute} IS #{[:contains, :is].include?(operator) ? '' : 'NOT '}NULL"
+            elsif operator == :contains_only
+              column = model.columns_hash[attribute_name.to_s]
+              if defined?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) &&
+                  column.is_a?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) &&
+                  column.array
+                obligation_conds << "ARRAY_LENGTH((#{sql_attribute} - ARRAY[:#{bindvar}]::#{column.sql_type}), 1) = 0"
+                binds[bindvar] = attribute_value(value)
+              end
             else
               attribute_operator = case operator
                                    when :contains, :is             then "= :#{bindvar}"
-                                   when :contains_only             then
-                                      column = model.columns_hash[attribute_name.to_s]
-                                      if defined?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.kind_of?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.array
-                                        "- ARRAY[:#{bindvar}]::#{column.sql_type}"
-                                      end
                                    when :does_not_contain, :is_not then "<> :#{bindvar}"
                                    when :is_in                     then
                                      column = model.columns_hash[attribute_name.to_s]
@@ -297,13 +300,7 @@ module Authorization
                                    else raise AuthorizationUsageError, "Unknown operator: #{operator}"
                                    end
 
-              sql_query = if operator == :contains_only
-                "array_length((#{sql_attribute} #{attribute_operator}), 1) = 0"
-              else
-                "#{sql_attribute} #{attribute_operator}"
-              end
-
-              obligation_conds << sql_query
+              obligation_conds << "#{sql_attribute} #{attribute_operator}"
               binds[bindvar] = attribute_value(value)
             end
           end
