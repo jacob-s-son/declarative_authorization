@@ -269,6 +269,11 @@ module Authorization
             else
               attribute_operator = case operator
                                    when :contains, :is             then "= :#{bindvar}"
+                                   when :contains_only             then
+                                      column = model.columns_hash[attribute_name.to_s]
+                                      if defined?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.kind_of?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) && column.array
+                                        "- ARRAY[:#{bindvar}]::#{column.sql_type}"
+                                      end
                                    when :does_not_contain, :is_not then "<> :#{bindvar}"
                                    when :is_in                     then
                                      column = model.columns_hash[attribute_name.to_s]
@@ -291,7 +296,14 @@ module Authorization
                                    when :gte                       then ">= :#{bindvar}"
                                    else raise AuthorizationUsageError, "Unknown operator: #{operator}"
                                    end
-              obligation_conds << "#{sql_attribute} #{attribute_operator}"
+
+              sql_query = if operator == :contains_only
+                "array_length((#{sql_attribute} #{attribute_operator}), 1) = 0"
+              else
+                "#{sql_attribute} #{attribute_operator}"
+              end
+
+              obligation_conds << sql_query
               binds[bindvar] = attribute_value(value)
             end
           end
@@ -368,4 +380,3 @@ module Authorization
     end
   end
 end
-
