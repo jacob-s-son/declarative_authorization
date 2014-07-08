@@ -4,9 +4,14 @@ require File.join(File.dirname(__FILE__), %w{.. lib declarative_authorization in
 ActiveRecord::Base.send :include, Authorization::AuthorizationInModel
 #ActiveRecord::Base.logger = Logger.new(STDOUT)
 
-options = {:adapter => 'sqlite3', :timeout => 500, :database => ':memory:'}
+options = {
+  :adapter => 'postgresql',
+  :database => 'declarative_authorization_test',
+  :host => "localhost",
+  :username => "rails",
+  :password => "rails",
+}
 ActiveRecord::Base.establish_connection(options)
-ActiveRecord::Base.configurations = { 'sqlite3_ar_integration' => options }
 ActiveRecord::Base.connection
 
 File.read(File.dirname(__FILE__) + "/schema.sql").split(';').each do |sql|
@@ -1932,4 +1937,3 @@ class ModelTest < Test::Unit::TestCase
     end
   end
 end
-
