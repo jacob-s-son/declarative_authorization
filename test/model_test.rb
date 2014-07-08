@@ -4,9 +4,14 @@ require File.join(File.dirname(__FILE__), %w{.. lib declarative_authorization in
 ActiveRecord::Base.send :include, Authorization::AuthorizationInModel
 #ActiveRecord::Base.logger = Logger.new(STDOUT)
 
-options = {:adapter => 'sqlite3', :timeout => 500, :database => ':memory:'}
+options = {
+  :adapter => 'postgresql',
+  :database => 'declarative_authorization_test',
+  :host => "localhost",
+  :username => "rails",
+  :password => "rails",
+}
 ActiveRecord::Base.establish_connection(options)
-ActiveRecord::Base.configurations = { 'sqlite3_ar_integration' => options }
 ActiveRecord::Base.connection
 
 File.read(File.dirname(__FILE__) + "/schema.sql").split(';').each do |sql|
@@ -126,6 +131,10 @@ class Country < ActiveRecord::Base
   has_many :test_models
   has_many :companies
   attr_accessible :name
+end
+
+class Store < ActiveRecord::Base
+  attr_accessible :product_ids
 end
 
 class NamedScopeModelTest < Test::Unit::TestCase
@@ -785,6 +794,29 @@ class NamedScopeModelTest < Test::Unit::TestCase
 
     TestModel.delete_all
     TestAttr.delete_all
+  end
+
+  def test_with_contains_only
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role do
+          has_permission_on :stores, :to => :read do
+            if_attribute :product_ids => contains_only { user.manageable_product_ids }
+          end
+        end
+      end
+    }
+    Authorization::Engine.instance(reader)
+
+    store_1 = Store.create!(:product_ids => [1, 3, 4])
+    store_2 = Store.create!(:product_ids => [1, 2])
+    store_3 = Store.create!(:product_ids => [1, 3])
+
+    user = MockUser.new(:test_role,
+                        :manageable_product_ids => [1, 3, 4])
+    assert_equal [store_1.id, store_3.id],
+      Store.with_permissions_to(:read, :user => user).pluck(:id)
   end
 
   def test_with_does_not_contain
@@ -1932,4 +1964,3 @@ class ModelTest < Test::Unit::TestCase
     end
   end
 end
-

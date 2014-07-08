@@ -266,6 +266,14 @@ module Authorization
                 "#{parent_model.connection.quote_table_name(attribute_name)}"
             if value.nil? and [:is, :is_not].include?(operator)
               obligation_conds << "#{sql_attribute} IS #{[:contains, :is].include?(operator) ? '' : 'NOT '}NULL"
+            elsif operator == :contains_only
+              column = model.columns_hash[attribute_name.to_s]
+              if defined?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) &&
+                  column.is_a?(ActiveRecord::ConnectionAdapters::PostgreSQLColumn) &&
+                  column.array
+                obligation_conds << "ARRAY_LENGTH((#{sql_attribute} - ARRAY[:#{bindvar}]::#{column.sql_type}), 1) = 0"
+                binds[bindvar] = attribute_value(value)
+              end
             else
               attribute_operator = case operator
                                    when :contains, :is             then "= :#{bindvar}"
@@ -291,6 +299,7 @@ module Authorization
                                    when :gte                       then ">= :#{bindvar}"
                                    else raise AuthorizationUsageError, "Unknown operator: #{operator}"
                                    end
+
               obligation_conds << "#{sql_attribute} #{attribute_operator}"
               binds[bindvar] = attribute_value(value)
             end
@@ -368,4 +377,3 @@ module Authorization
     end
   end
 end
-

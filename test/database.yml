@@ -1,3 +1,6 @@
 test:
-  adapter: sqlite3
-  database: ":memory:"
+  adapter: postgresql
+  database: declarative_authorization_test
+  username: rails
+  password: rails
+  host: localhost
