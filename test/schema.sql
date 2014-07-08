@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS intarray;
 
-DROP TABLE test_models;
+DROP TABLE IF EXISTS test_models;
 
 CREATE TABLE test_models (
   id serial PRIMARY KEY,
@@ -11,7 +11,7 @@ CREATE TABLE test_models (
   updated_at timestamp
 );
 
-DROP TABLE test_attrs;
+DROP TABLE IF EXISTS test_attrs;
 
 CREATE TABLE test_attrs (
   id serial PRIMARY KEY,
@@ -26,14 +26,14 @@ CREATE TABLE test_attrs (
   attr integer default 1
 );
 
-DROP TABLE test_attr_throughs;
+DROP TABLE IF EXISTS test_attr_throughs;
 
 CREATE TABLE test_attr_throughs (
   id serial PRIMARY KEY,
   test_attr_id integer
 );
 
-DROP TABLE test_model_security_models;
+DROP TABLE IF EXISTS test_model_security_models;
 
 CREATE TABLE test_model_security_models (
   id serial PRIMARY KEY,
@@ -42,13 +42,13 @@ CREATE TABLE test_model_security_models (
   test_attr_id integer
 );
 
-DROP TABLE n_way_join_items;
+DROP TABLE IF EXISTS n_way_join_items;
 
 CREATE TABLE n_way_join_items (
   id serial PRIMARY KEY
 );
 
-DROP TABLE branches;
+DROP TABLE IF EXISTS branches;
 
 CREATE TABLE branches (
   id serial PRIMARY KEY,
@@ -56,7 +56,7 @@ CREATE TABLE branches (
   name text
 );
 
-DROP TABLE companies;
+DROP TABLE IF EXISTS companies;
 
 CREATE TABLE companies (
   id serial PRIMARY KEY,
@@ -65,9 +65,16 @@ CREATE TABLE companies (
   name text
 );
 
-DROP TABLE countries;
+DROP TABLE IF EXISTS countries;
 
 CREATE TABLE countries (
   id serial PRIMARY KEY,
   name text
+);
+
+DROP TABLE IF EXISTS stores;
+
+CREATE TABLE stores (
+  id serial PRIMARY KEY,
+  product_ids integer[]
 );

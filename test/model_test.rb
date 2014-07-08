@@ -133,6 +133,10 @@ class Country < ActiveRecord::Base
   attr_accessible :name
 end
 
+class Store < ActiveRecord::Base
+  attr_accessible :product_ids
+end
+
 class NamedScopeModelTest < Test::Unit::TestCase
   def test_multiple_deep_ored_belongs_to
     reader = Authorization::Reader::DSLReader.new
@@ -790,6 +794,29 @@ class NamedScopeModelTest < Test::Unit::TestCase
 
     TestModel.delete_all
     TestAttr.delete_all
+  end
+
+  def test_with_contains_only
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role do
+          has_permission_on :stores, :to => :read do
+            if_attribute :product_ids => contains_only { user.manageable_product_ids }
+          end
+        end
+      end
+    }
+    Authorization::Engine.instance(reader)
+
+    store_1 = Store.create!(:product_ids => [1, 3, 4])
+    store_2 = Store.create!(:product_ids => [1, 2])
+    store_3 = Store.create!(:product_ids => [1, 3])
+
+    user = MockUser.new(:test_role,
+                        :manageable_product_ids => [1, 3, 4])
+    assert_equal [store_1.id, store_3.id],
+      Store.with_permissions_to(:read, :user => user).pluck(:id)
   end
 
   def test_with_does_not_contain
