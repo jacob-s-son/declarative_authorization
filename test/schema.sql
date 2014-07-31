@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS intarray;
+CREATE EXTENSION IF NOT EXISTS hstore;
 
 DROP TABLE IF EXISTS test_models;
 
@@ -76,5 +77,6 @@ DROP TABLE IF EXISTS stores;
 
 CREATE TABLE stores (
   id serial PRIMARY KEY,
-  product_ids integer[]
+  product_ids integer[],
+  permissions_flags hstore
 );

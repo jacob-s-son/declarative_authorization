@@ -4,7 +4,7 @@ module AuthorizationRulesHelper
       :constant => [/(:)(\w+)/], 
       :proc => ['role', 'authorization', 'privileges'],
       :statement => ['has_permission_on', 'if_attribute', 'if_permitted_to', 'includes', 'privilege', 'to'],
-      :operator => ['is', 'contains', 'is_in', 'is_not', 'is_not_in', 'intersects'],
+      :operator => ['is', 'contains', 'is_in', 'is_not', 'is_not_in', 'intersects', 'flag_enabled'],
       :special => ['user', 'true', 'false'],
       :preproc => ['do', 'end', /()(=&gt;)/, /()(\{)/, /()(\})/, /()(\[)/, /()(\])/],
       :comment => [/()(#.*$)/]#,

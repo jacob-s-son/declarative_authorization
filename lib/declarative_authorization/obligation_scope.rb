@@ -274,6 +274,8 @@ module Authorization
                 obligation_conds << "ARRAY_LENGTH((#{sql_attribute} - ARRAY[:#{bindvar}]::#{column.sql_type}), 1) = 0"
                 binds[bindvar] = attribute_value(value)
               end
+            elsif operator == :flag_enabled
+              obligation_conds << "#{sql_attribute} @> '#{value.to_s}=>true'"
             else
               attribute_operator = case operator
                                    when :contains, :is             then "= :#{bindvar}"

@@ -579,6 +579,14 @@ module Authorization
                   "subclass of Enumerable as value, got: #{attr_value.inspect} " +
                   "is_in #{evaluated.inspect}: #{e}"
             end
+          when :flag_enabled
+            begin
+              attr_value.fetch(evaluated.to_s, 'false') == 'true'
+            rescue NoMethodError => e
+              raise AuthorizationUsageError, "Operator flag_enabled requires a " +
+                  "subclass of Hash as attribute, got: #{attr_value.inspect} " +
+                  "and Symbol/String as value #{evaluated.inspect}: #{e}"
+            end
           when :is_not_in
             begin
               !evaluated.include?(attr_value)

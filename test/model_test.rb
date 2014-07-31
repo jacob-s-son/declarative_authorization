@@ -134,7 +134,8 @@ class Country < ActiveRecord::Base
 end
 
 class Store < ActiveRecord::Base
-  attr_accessible :product_ids
+  attr_accessible :product_ids, :permissions_flags
+  serialize :permissions_flags, ActiveRecord::Coders::Hstore
 end
 
 class NamedScopeModelTest < Test::Unit::TestCase
@@ -1962,5 +1963,29 @@ class ModelTest < Test::Unit::TestCase
     assert_raise Authorization::NotAuthorized do
       allowed_read_company.permitted_to!(:test_attrs, :user => user)
     end
+  end
+
+
+  def test_with_flag_enabled
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role do
+          has_permission_on :test_attrs, :to => :read do
+            if_attribute :permissions_flags => flag_enabled { :testing }
+          end
+        end
+      end
+    }
+    Authorization::Engine.instance(reader)
+
+    store1 = Store.create!( :permissions_flags => { :testing => true } )
+    store2 = Store.create!( :permissions_flags => { :testing => false } )
+
+    user = MockUser.new(:test_role)
+    assert_equal 1, Store.with_permissions_to(:read,
+      :context => :test_attrs, :user => user).length
+
+    Store.delete_all
   end
 end
