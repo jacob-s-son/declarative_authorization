@@ -253,6 +253,10 @@ module Authorization
               attribute_table_alias = table_alias_for(path[0..-2])
               used_paths << path[0..-2]
               delete_paths << path
+            elsif operator == :is_set
+              attribute_name = attribute
+              attribute_table_alias = table_alias
+              used_paths << path
             else
               attribute_name = model.columns_hash["#{attribute}_id"] && :"#{attribute}_id" ||
                                model.columns_hash[attribute.to_s]    && attribute ||
@@ -274,8 +278,19 @@ module Authorization
                 obligation_conds << "ARRAY_LENGTH((#{sql_attribute} - ARRAY[:#{bindvar}]::#{column.sql_type}), 1) = 0"
                 binds[bindvar] = attribute_value(value)
               end
-            elsif operator == :flag_enabled
-              obligation_conds << "#{sql_attribute} @> '#{value.to_s}=>true'"
+            elsif operator == :is_set
+              segments = sql_attribute.split('.')
+              key = segments.pop
+              attribute_normalized = segments.join('.')
+
+              if value.to_s == 'true'
+                obligation_conds << "#{attribute_normalized} @> '#{key.to_s}=>true'"
+              else
+                obligation_conds << <<-SQL
+                  #{attribute_normalized} @> '#{key.to_s}=>false' OR
+                  #{attribute_normalized} @> '#{key.to_s}=>NULL'
+                SQL
+              end
             else
               attribute_operator = case operator
                                    when :contains, :is             then "= :#{bindvar}"

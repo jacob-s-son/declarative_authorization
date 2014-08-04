@@ -565,25 +565,44 @@ class AuthorizationTest < Test::Unit::TestCase
               :object => MockDataObject.new(:test_attr => 4))
   end
 
-  def test_attribute_flag_enabled
+  def test_attribute_is_set
     reader = Authorization::Reader::DSLReader.new
     reader.parse %|
       authorization do
         role :test_role do
           has_permission_on :permissions, :to => :test do
-            if_attribute :permissions_flags => flag_enabled { :testing }
+            if_attribute :"permissions_flags.testing" => is_set { true },
+            :"permissions_flags.reverse_testing" => is_set { false }
           end
         end
       end
     |
-    engine = Authorization::Engine.new(reader)
-    assert engine.permit?(:test, :context => :permissions,
-              :user => MockUser.new(:test_role),
-              :object => MockDataObject.new(:permissions_flags => { 'testing' => 'true' }))
 
-    assert !engine.permit?(:test, :context => :permissions,
-              :user => MockUser.new(:test_role),
-              :object => MockDataObject.new(:permissions_flags => { 'testing' => 'false' }))
+    engine = Authorization::Engine.new(reader)
+
+    assert engine.permit?(
+      :test,
+      :context => :permissions,
+      :user => MockUser.new(:test_role),
+      :object => MockDataObject.new(
+        :permissions_flags => {
+          'testing' => 'true',
+          'reverse_testing' => 'false'
+        }
+      )
+    )
+
+    assert !engine.permit?(
+      :test,
+      :context => :permissions,
+      :user => MockUser.new(:test_role),
+      :object => MockDataObject.new(
+        :permissions_flags => {
+          'testing' => 'false',
+          'reverse_testing' => 'true'
+        }
+      )
+    )
   end
 
   def test_attribute_not_in_array

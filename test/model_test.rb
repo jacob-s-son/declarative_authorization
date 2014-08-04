@@ -1966,13 +1966,13 @@ class ModelTest < Test::Unit::TestCase
   end
 
 
-  def test_with_flag_enabled
+  def test_with_is_set_to_true
     reader = Authorization::Reader::DSLReader.new
     reader.parse %{
       authorization do
         role :test_role do
           has_permission_on :test_attrs, :to => :read do
-            if_attribute :permissions_flags => flag_enabled { :testing }
+            if_attribute :"permissions_flags.testing" => is_set { true }
           end
         end
       end
@@ -1981,10 +1981,85 @@ class ModelTest < Test::Unit::TestCase
 
     store1 = Store.create!( :permissions_flags => { :testing => true } )
     store2 = Store.create!( :permissions_flags => { :testing => false } )
+    store3 = Store.create!( :permissions_flags => { :testing => nil } )
 
     user = MockUser.new(:test_role)
-    assert_equal 1, Store.with_permissions_to(:read,
-      :context => :test_attrs, :user => user).length
+
+    assert_equal(
+      true,
+      Store.with_permissions_to(
+        :read,
+        :context => :test_attrs,
+        :user => user
+      ).include?(store1)
+    )
+
+    assert_equal(
+      false,
+      Store.with_permissions_to(
+        :read,
+        :context => :test_attrs,
+        :user => user
+      ).include?(store2)
+    )
+
+    assert_equal(
+      false,
+      Store.with_permissions_to(
+        :read,
+        :context => :test_attrs,
+        :user => user
+      ).include?(store3)
+    )
+
+    Store.delete_all
+  end
+
+  def test_with_is_set_to_false
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role do
+          has_permission_on :test_attrs, :to => :read do
+            if_attribute :"permissions_flags.testing" => is_set { false }
+          end
+        end
+      end
+    }
+    Authorization::Engine.instance(reader)
+
+    store1 = Store.create!( :permissions_flags => { :testing => true } )
+    store2 = Store.create!( :permissions_flags => { :testing => false } )
+    store3 = Store.create!( :permissions_flags => { :testing => nil } )
+
+    user = MockUser.new(:test_role)
+
+    assert_equal(
+      false,
+      Store.with_permissions_to(
+        :read,
+        :context => :test_attrs,
+        :user => user
+      ).include?(store1)
+    )
+
+    assert_equal(
+      true,
+      Store.with_permissions_to(
+        :read,
+        :context => :test_attrs,
+        :user => user
+      ).include?(store2)
+    )
+
+    assert_equal(
+      true,
+      Store.with_permissions_to(
+        :read,
+        :context => :test_attrs,
+        :user => user
+      ).include?(store3)
+    )
 
     Store.delete_all
   end

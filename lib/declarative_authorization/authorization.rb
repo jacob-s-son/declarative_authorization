@@ -579,9 +579,9 @@ module Authorization
                   "subclass of Enumerable as value, got: #{attr_value.inspect} " +
                   "is_in #{evaluated.inspect}: #{e}"
             end
-          when :flag_enabled
+          when :is_set
             begin
-              attr_value.fetch(evaluated.to_s, 'false') == 'true'
+              attr_value == evaluated.to_s
             rescue NoMethodError => e
               raise AuthorizationUsageError, "Operator flag_enabled requires a " +
                   "subclass of Hash as attribute, got: #{attr_value.inspect} " +
@@ -645,7 +645,11 @@ module Authorization
     protected
     def object_attribute_value (object, attr)
       begin
-        object.send(attr)
+        if (segments = attr.to_s.split('.') ).size > 1
+          object.send(segments.first)[segments.last]
+        else
+          object.send(attr)
+        end
       rescue ArgumentError, NoMethodError => e
         raise AuthorizationUsageError, "Error occurred while validating attribute ##{attr} on #{object.inspect}: #{e}.\n" +
           "Please check your authorization rules and ensure the attribute is correctly spelled and \n" +

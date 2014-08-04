@@ -505,8 +505,8 @@ module Authorization
 
       # Checks if an hstore column has a flag
       # (represented by key) set to true
-      def flag_enabled(&block)
-        [:flag_enabled, block]
+      def is_set(&block)
+        [:is_set, block]
       end
 
       # The negation of is_in.
