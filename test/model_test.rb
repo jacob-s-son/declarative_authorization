@@ -134,8 +134,14 @@ class Country < ActiveRecord::Base
 end
 
 class Store < ActiveRecord::Base
+  has_many :store_employees
   attr_accessible :product_ids, :permissions_flags
   serialize :permissions_flags, ActiveRecord::Coders::Hstore
+end
+
+class StoreEmployee < ActiveRecord::Base
+  belongs_to :store
+  attr_accessible :name, :store, :store_id
 end
 
 class NamedScopeModelTest < Test::Unit::TestCase
@@ -1983,6 +1989,7 @@ class ModelTest < Test::Unit::TestCase
     store2 = Store.create!( :permissions_flags => { :testing => false } )
     store3 = Store.create!( :permissions_flags => { :testing => nil } )
 
+
     user = MockUser.new(:test_role)
 
     assert_equal(
@@ -2062,5 +2069,48 @@ class ModelTest < Test::Unit::TestCase
     )
 
     Store.delete_all
+  end
+
+  def test_with_is_set_nested
+    reader = Authorization::Reader::DSLReader.new
+    reader.parse %{
+      authorization do
+        role :test_role do
+          has_permission_on :store_employees, :to => :read do
+            if_attribute :store => { :"permissions_flags.testing" => is_set { true } }
+          end
+        end
+      end
+    }
+    Authorization::Engine.instance(reader)
+
+    store1 = Store.create!( :permissions_flags => { :testing => true } )
+    store2 = Store.create!( :permissions_flags => { :testing => false } )
+
+    employee1 = StoreEmployee.create( :name => 'John', :store => store1 )
+    employee2 = StoreEmployee.create( :name => 'Mick', :store => store2 )
+
+    user = MockUser.new(:test_role)
+
+    assert_equal(
+      true,
+      StoreEmployee.with_permissions_to(
+        :read,
+        :context => :store_employees,
+        :user => user
+      ).include?(employee1)
+    )
+
+    assert_equal(
+      false,
+      StoreEmployee.with_permissions_to(
+        :read,
+        :context => :store_employees,
+        :user => user
+      ).include?(employee2)
+    )
+
+    Store.delete_all
+    StoreEmployee.delete_all
   end
 end

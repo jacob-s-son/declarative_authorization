@@ -80,3 +80,12 @@ CREATE TABLE stores (
   product_ids integer[],
   permissions_flags hstore
 );
+
+DROP TABLE IF EXISTS store_employees;
+
+CREATE TABLE store_employees (
+  id serial PRIMARY KEY,
+  store_id integer,
+  name varchar
+);
+
